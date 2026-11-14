@@ -4,10 +4,14 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
-from ConvNet import ConvNet
+from ConvNet import ConvNet 
 import argparse
-
-
+import numpy as np 
+import csv
+import time
+from datetime import timedelta
+import data
+    
 def main(FLAGS):
     # Check if cuda is available
     use_cuda = torch.cuda.is_available()
@@ -16,13 +20,27 @@ def main(FLAGS):
     # Set proper device based on cuda/mps availability 
     device = torch.device("cuda" if use_cuda else "mps" if use_mps else "cpu")
     print("Torch device selected: ", device)
-        
+    
+    # Load datasets for training and testing
+    places = datasets.Places365("./data", split="val", small=True, download=True)
+    train_indices, test_indices = data.select_indices(places)
+    
+    train_set = data.PlacesDataset(places, train_indices, FLAGS.image_size, train=True)
+    test_set = data.PlacesDataset(places, test_indices, FLAGS.image_size, train=False)
+    
+    train_loader = DataLoader(train_set, batch_size = FLAGS.batch_size, 
+                                shuffle=True, num_workers=4, persistent_workers=True)
+    test_loader = DataLoader(test_set, batch_size = FLAGS.batch_size, 
+                                shuffle=False, num_workers=4, persistent_workers=True)
+     
+    L, ab = next(iter(train_loader))
+    print(L.shape, ab.shape)   # expect [50, 1, 64, 64] and [50, 2, 64, 64]
+    return
+   
     # Initialize the model and send to device 
     model = ConvNet(FLAGS.mode).to(device)
 
-    # Define loss function. NLLLoss, combined with the log-softmax layer applied 
-    # in the CNN, creates CrossEntropyLoss. Torch's built in CrossEntropyLoss
-    # automatically applies softmax, which would result in two applications 
+    # Define loss function
     criterion = nn.NLLLoss()
         
     # Define optimizer function.
@@ -30,34 +48,44 @@ def main(FLAGS):
         
     # Define scheduler function
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=FLAGS.num_epochs)
+    
+    best_accuracy = 0.0
         
-    # Create transformations to apply to each data sample 
-    normalize = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616))
+    # Set up data file for report analysis
+    data_file = open(f"data/output/data-{FLAGS.mode}-{FLAGS.learning_rate}-{FLAGS.num_epochs}-{FLAGS.batch_size}.csv", mode='w', newline="", encoding="utf-8")
+    writer = csv.writer(data_file)
+    writer.writerow(["epoch", "train_loss", "train_acc", "test_loss", "test_acc"])
         
-    # Transform with random crops and flips to help avoid overfitting
-    train_transform=transforms.Compose([
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomCrop(32, 2),
-        transforms.ToTensor(),
-        normalize
-    ])
+    # Record start time
+    start_time = time.perf_counter()
         
-    # Unmodified transform for test
-    test_transform=transforms.Compose([
-        transforms.ToTensor(),
-        normalize
-    ])
+    # Run training for n_epochs specified in config 
+    for epoch in range(1, FLAGS.num_epochs + 1):
+        print(f"\nEpoch {epoch}")
+        train_loss, train_accuracy = train(model, device, train_loader,
+                                            optimizer, criterion, epoch, FLAGS.batch_size)
+        test_loss, test_accuracy = test(model, device, test_loader, criterion)
+            
+        scheduler.step()
+            
+        if test_accuracy > best_accuracy:
+            best_accuracy = test_accuracy
+            
+        # Save data to analysis file
+        writer.writerow([epoch, train_loss, train_accuracy, test_loss, test_accuracy])
         
-    # Load datasets for training and testing
-    # Inbuilt datasets available in torchvision (check documentation online)
-    dataset1 = datasets.Places365('./data/', train=True, download=True,
-                    transform=train_transform)
-    dataset2 = datasets.Places365('./data/', train=False,
-                    transform=test_transform)
-    train_loader = DataLoader(dataset1, batch_size = FLAGS.batch_size, 
-                                shuffle=True, num_workers=4, persistent_workers=True)
-    test_loader = DataLoader(dataset2, batch_size = FLAGS.batch_size, 
-                                shuffle=False, num_workers=4, persistent_workers=True)
+    # Record end and total time
+    end_time = time.perf_counter()
+    proc_time = end_time - start_time
+    td_duration = timedelta(seconds=proc_time)
+        
+    print("accuracy is {:2.2f}".format(100. * best_accuracy))
+        
+    print(f"Processing took {td_duration} total, {td_duration / FLAGS.num_epochs} per epoch")
+        
+    print("Training and evaluation finished")
+        
+    data_file.close()
 
 
 
@@ -77,6 +105,9 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size',
                         type=int, default=50,
                         help='Batch size. Must divide evenly into the dataset sizes.')
+    parser.add_argument('--image_size', type=int, default=64,
+                        help='Height/width images are resized to.')
+
         
     FLAGS = None
     FLAGS, unparsed = parser.parse_known_args()
