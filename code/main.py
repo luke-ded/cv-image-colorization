@@ -18,7 +18,7 @@ import csv
 import time
 import os
 from datetime import timedelta
-import data, bins
+import data, bins, visualize
 
 def train(model, device, train_loader, optimizer, criterion, epoch, batch_size, cell_to_bin):
     '''
@@ -156,6 +156,7 @@ def main(FLAGS):
     # Load bins
     bins_data = torch.load("./data/bins.pt")
     cell_to_bin = bins_data["cell_to_bin"].to(device)
+    centers = bins_data["centers"].to(device)
     weights = bins_data["weights"].to(device)
     Q = len(weights)
 
@@ -205,7 +206,9 @@ def main(FLAGS):
     print("accuracy is {:2.2f}".format(100. * best_accuracy))
         
     print(f"Processing took {td_duration} total, {td_duration / FLAGS.num_epochs} per epoch")
-        
+    
+    visualize.save_samples(model, device, test_set, centers, f"data/output/samples-{FLAGS.learning_rate}-{FLAGS.num_epochs}-{FLAGS.batch_size}.png")
+
     print("Training and evaluation finished")
         
     data_file.close()
