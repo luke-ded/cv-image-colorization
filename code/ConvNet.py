@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
 # Luke Dederich
-# Programming Assignment 3
+# Final Project
 # CAP 5415 Computer Vision
 # Dr. Rawat
 
+# Add skip connections?
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -14,77 +15,79 @@ class ConvNet(nn.Module):
         Defines a Autoencoder Structure
         Extends torch.nn.Module class
     """    
-    def __init__(self, mode):
-        """
-            Initializes the Autoencoder structure based on mode
-            mode (int): 1-2, determines step to run
-        """
+    def __init__(self, num_bins):
         super(ConvNet, self).__init__()
         
-        # Define layers based on mode/step and select the forward pass function based on mode for the ConvNet.
-        if mode == 1:
-            # 28 * 28 = 784
-            self.enc_fc1 = nn.Linear(784, 256)
-            self.enc_fc2 = nn.Linear(256, 128)
-            self.dec_fc1 = nn.Linear(128, 256)
-            self.dec_fc2 = nn.Linear(256, 784)
+        # Encoding layers
+        # Double the channels when halving size
+        self.enc_conv1 = nn.Conv2d(1, 64, 3, padding=1)
+        self.enc_b1 = nn.BatchNorm2d(64)
+        self.enc_conv2 = nn.Conv2d(64, 64, 3, padding=1)
+        self.enc_b2 = nn.BatchNorm2d(64)
+        
+        self.enc_conv3 = nn.Conv2d(64, 128, 3, padding=1)
+        self.enc_b3 = nn.BatchNorm2d(128)
+        self.enc_conv4 = nn.Conv2d(128, 128, 3, padding=1)
+        self.enc_b4 = nn.BatchNorm2d(128)
+        
+        self.enc_conv5 = nn.Conv2d(128, 256, 3, padding=1)
+        self.enc_b5 = nn.BatchNorm2d(256)
+        self.enc_conv6 = nn.Conv2d(256, 256, 3, padding=1)
+        self.enc_b6 = nn.BatchNorm2d(256)
+        
+        # Bottleneck
+        self.enc_conv7 = nn.Conv2d(256, 256, 3, padding=1)
+        self.enc_b7 = nn.BatchNorm2d(256)
+        self.enc_conv8 = nn.Conv2d(256, 256, 3, padding=1)
+        self.enc_b8 = nn.BatchNorm2d(256)
+        
+        # Decoding layers
+        self.dec_conv1 = nn.Conv2d(256, 256, 3, padding=1)
+        self.dec_b1 = nn.BatchNorm2d(256)
+        self.dec_conv2 = nn.Conv2d(256, 256, 3, padding=1)
+        self.dec_b2 = nn.BatchNorm2d(256)
+        
+        self.dec_conv3 = nn.Conv2d(256, 128, 3, padding=1)
+        self.dec_b3 = nn.BatchNorm2d(128)
+        self.dec_conv4 = nn.Conv2d(128, 128, 3, padding=1)
+        self.dec_b4 = nn.BatchNorm2d(128)
+        
+        self.dec_conv5 = nn.Conv2d(128, 64, 3, padding=1)
+        self.dec_b5 = nn.BatchNorm2d(64)
+        self.dec_conv6 = nn.Conv2d(64, 64, 3, padding=1)
+        self.dec_b6 = nn.BatchNorm2d(64)
+        
+        # Output layer to convert into bin number
+        self.out = nn.Conv2d(64, num_bins, 1)
 
-            self.forward = self.model_1
-        elif mode == 2:
-            self.enc_conv1 = nn.Conv2d(1, 32, 3, 1, 1)
-            self.enc_conv2 = nn.Conv2d(32, 16, 3, 1, 1)
-            self.dec_conv1 = nn.Conv2d(16, 16, 3, 1, 1)
-            self.dec_conv2 = nn.Conv2d(16, 32, 3, 1, 1)
-            self.dec_conv3 = nn.Conv2d(32, 1, 3, 1, 1)
-            
-            self.forward = self.model_2
-        else: 
-            print("Invalid mode ", mode, "selected. Select between 1-2")
-            exit(0)
-        
-        
-    def model_1(self, X):
-        # ======================================================================
-        # Fully conencted neural network
-        
-        # Flatten for FC layers
-        X = X.view(-1, self.num_flat_features(X))
-        
+    def forward(self, x):
         # Encoder layers
-        X = F.relu(self.enc_fc1(X))
-        X = F.relu(self.enc_fc2(X))
+        x = F.relu(self.enc_b1(self.enc_conv1(x)))
+        x = F.relu(self.enc_b2(self.enc_conv2(x)))
+        x = F.max_pool2d(x, 2)
+        x = F.relu(self.enc_b3(self.enc_conv3(x)))
+        x = F.relu(self.enc_b4(self.enc_conv4(x)))
+        x = F.max_pool2d(x, 2)
+        x = F.relu(self.enc_b5(self.enc_conv5(x)))
+        x = F.relu(self.enc_b6(self.enc_conv6(x)))
+        x = F.max_pool2d(x, 2)
+        
+        # Bottleneck
+        x = F.relu(self.enc_b7(self.enc_conv7(x)))
+        x = F.relu(self.enc_b8(self.enc_conv8(x)))
         
         # Decoder layers
-        X = F.relu(self.dec_fc1(X))
-        X = torch.sigmoid(self.dec_fc2(X))
-        
-        # Transform output into 28 pixel images for MNIST
-        fcl = X.view(-1, 1, 28, 28)
-        
-        return fcl
-
-    def model_2(self, X):
-        # ======================================================================
-        # Convolutional neural network
-
-        # Encoder layers
-        X = F.max_pool2d(F.relu(self.enc_conv1(X)), (2, 2))
-        X = F.max_pool2d(F.relu(self.enc_conv2(X)), (2, 2))
-        
-        # Decoder layers
-        X = F.interpolate(F.relu(self.dec_conv1(X)), scale_factor=2)
-        X = F.interpolate(F.relu(self.dec_conv2(X)), scale_factor=2)
+        x = F.interpolate(x, scale_factor=2)
+        x = F.relu(self.dec_b1(self.dec_conv1(x)))
+        x = F.relu(self.dec_b2(self.dec_conv2(x)))
+        x = F.interpolate(x, scale_factor=2)
+        x = F.relu(self.dec_b3(self.dec_conv3(x)))
+        x = F.relu(self.dec_b4(self.dec_conv4(x)))
+        x = F.interpolate(x, scale_factor=2)
+        x = F.relu(self.dec_b5(self.dec_conv5(x)))
+        x = F.relu(self.dec_b6(self.dec_conv6(x)))
         
         
-        fcl = self.dec_conv3(X)
-        return fcl
-
-    
-    # Computes number of features flattened; from class notes
-    def num_flat_features(self, X):
-        size = X.size()[1:]
-        num_features = 1
-        for s in size:
-            num_features *= s
-            
-        return num_features
+        probs = F.log_softmax(self.out(x), dim=1)
+        
+        return probs

@@ -1,5 +1,16 @@
+#!/usr/bin/env python3
+###############################################################################
+
+# Luke Dederich
+# Final Project
+# CAP 5415 Computer Vision
+# Dr. Rawat
+
+###############################################################################
 ## The goal: set up bins by finding which bins to use, the center of each bin, 
 ## and which colors are common/rare
+###############################################################################
+
 import data
 import torch
 from torch.utils.data import DataLoader
