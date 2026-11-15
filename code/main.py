@@ -17,6 +17,7 @@ import numpy as np
 import csv
 import time
 import os
+import math
 from datetime import timedelta
 import data, bins, visualize
 
@@ -173,6 +174,8 @@ def main(FLAGS):
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=FLAGS.num_epochs)
     
     best_accuracy = 0.0
+    best_test_loss = math.inf
+    loss_not_inc = 0
         
     # Set up data file for report analysis
     os.makedirs("data/output", exist_ok=True)
@@ -198,6 +201,15 @@ def main(FLAGS):
         # Save data to analysis file
         writer.writerow([epoch, train_loss, train_accuracy, test_loss, test_accuracy])
         
+        if test_loss < best_test_loss:
+            torch.save(model.state_dict(), f"data/output/best_model-{FLAGS.learning_rate}-{FLAGS.num_epochs}-{FLAGS.batch_size}.pt")
+            best_test_loss = test_loss
+            loss_not_inc = 0
+        else:
+            loss_not_inc += 1
+            if loss_not_inc >= 5:
+                break
+            
     # Record end and total time
     end_time = time.perf_counter()
     proc_time = end_time - start_time
@@ -207,6 +219,7 @@ def main(FLAGS):
         
     print(f"Processing took {td_duration} total, {td_duration / FLAGS.num_epochs} per epoch")
     
+    model.load_state_dict(torch.load(f"data/output/best_model-{FLAGS.learning_rate}-{FLAGS.num_epochs}-{FLAGS.batch_size}.pt"))
     visualize.save_samples(model, device, test_set, centers, f"data/output/samples-{FLAGS.learning_rate}-{FLAGS.num_epochs}-{FLAGS.batch_size}.png")
 
     print("Training and evaluation finished")
