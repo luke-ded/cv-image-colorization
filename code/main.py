@@ -142,7 +142,7 @@ def main(FLAGS):
     print("Torch device selected: ", device)
     
     # Load datasets for training and testing
-    places = datasets.Places365("./data", split="val", small=True, download=True)
+    places = datasets.Places365("./data", split="train-standard", small=True, download=True)
     train_indices, test_indices = data.select_indices(places)
     
     train_set = data.PlacesDataset(places, train_indices, FLAGS.image_size, train=True)
