@@ -62,6 +62,11 @@ def to_lab(rgb):
 def to_rgb(lab):
     return torch.from_numpy(color.lab2rgb(lab.numpy(), channel_axis=0))
 
+def to_rgb(L, ab):
+    lab = torch.cat([(L + 1) * 50, ab], dim=1)
+    lab = lab.permute(0,2 , 3, 1).cpu().numpy()
+    return color.lab2rgb(lab)
+
 class PlacesDataset(torch.utils.data.Dataset):
     def __init__(self, places, indices, image_size, train):
         self.places = places

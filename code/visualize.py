@@ -1,8 +1,7 @@
 import matplotlib
 import matplotlib.pyplot as plt
-from skimage import color
 import torch
-import bins
+import bins, data
 
 matplotlib.use("Agg") 
 
@@ -19,11 +18,6 @@ def show_plot(matrix, axis, title=""):
     if title:
         axis.set_title(title)
     axis.axis('off')
-    
-def to_rgb(L, ab):
-    lab = torch.cat([(L + 1) * 50, ab], dim=1)
-    lab = lab.permute(0,2 , 3, 1).cpu().numpy()
-    return color.lab2rgb(lab)
 
 def save_samples(model, device, test_set, centers, path, n=6):
     model.eval()
@@ -34,9 +28,9 @@ def save_samples(model, device, test_set, centers, path, n=6):
     with torch.no_grad():
         predicted_ab = bins.decode(model(L), centers)
         
-    grayscale = to_rgb(L, torch.zeros_like(ab))
-    predicted = to_rgb(L, predicted_ab)
-    truth = to_rgb(L, ab)
+    grayscale = data.to_rgb(L, torch.zeros_like(ab))
+    predicted = data.to_rgb(L, predicted_ab)
+    truth = data.to_rgb(L, ab)
     
     fig, axes = plt.subplots(n, 3, figsize=(6, 2 * n))
     for row in range(n):
