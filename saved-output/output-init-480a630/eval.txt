@@ -1,0 +1,5 @@
+Torch device selected:  mps
+Output          PSNR    SSIM    Colorfulness
+gray            23.41   0.9025  0.00
+predicted       21.58   0.8462  53.30
+truth           nan     nan     41.80
