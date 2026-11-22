@@ -26,7 +26,7 @@ def save_samples(model, device, test_set, centers, path, n=6):
     ab = torch.stack([test_set[i][1] for i in picks]).to(device)
     
     with torch.no_grad():
-        predicted_ab = bins.decode(model(L), centers)
+        predicted_ab = bins.decode_annealed(model(L), centers)
         
     grayscale = data.to_rgb(L, torch.zeros_like(ab))
     predicted = data.to_rgb(L, predicted_ab)

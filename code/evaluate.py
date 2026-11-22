@@ -59,7 +59,7 @@ def main(FLAGS):
     with torch.no_grad():
         for L, ab in val_loader:
             L, ab = L.to(device), ab.to(device)
-            predicted_ab = bins.decode(model(L), centers)
+            predicted_ab = bins.decode_annealed(model(L), centers)
             
             images = {
                 "gray": data.to_rgb(L, torch.zeros_like(ab)),

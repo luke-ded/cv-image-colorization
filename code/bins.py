@@ -42,6 +42,11 @@ def decode(log_probs, centers):
     ab = ab.permute(0, 3, 1 ,2) # Re order channels
     
     return ab
+
+# Returns model prediction from bin to color
+def decode_annealed(log_probs, centers, T=0.38):
+    probs = torch.nn.functional.softmax(log_probs / T, dim=1)
+    return torch.einsum("bqhw,qc->bchw", probs, centers)
         
 if __name__ == "__main__":        
     # Load datasets for training and testing
