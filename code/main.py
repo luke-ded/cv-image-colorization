@@ -207,7 +207,7 @@ def main(FLAGS):
             loss_not_inc = 0
         else:
             loss_not_inc += 1
-            if loss_not_inc >= 5:
+            if loss_not_inc >= 8: # Quit if loss not increasing after this many
                 break
             
     # Record end and total time
