@@ -44,7 +44,7 @@ def decode(log_probs, centers):
     return ab
 
 # Returns model prediction from bin to color
-def decode_annealed(log_probs, centers, T=0.38):
+def decode_annealed(log_probs, centers, T=0.7):
     probs = torch.nn.functional.softmax(log_probs / T, dim=1)
     return torch.einsum("bqhw,qc->bchw", probs, centers)
         

@@ -5,14 +5,13 @@
 # CAP 5415 Computer Vision
 # Dr. Rawat
 
-# Add skip connections?
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 class ConvNet(nn.Module):
     """
-        Defines a Autoencoder Structure
+        Defines a U-net-style encoder-decoder Structure
         Extends torch.nn.Module class
     """    
     def __init__(self, num_bins):
@@ -42,17 +41,17 @@ class ConvNet(nn.Module):
         self.enc_b8 = nn.BatchNorm2d(128)
         
         # Decoding layers
-        self.dec_conv1 = nn.Conv2d(128, 128, 3, padding=1)
+        self.dec_conv1 = nn.Conv2d(128 + 128, 128, 3, padding=1)
         self.dec_b1 = nn.BatchNorm2d(128)
         self.dec_conv2 = nn.Conv2d(128, 128, 3, padding=1)
         self.dec_b2 = nn.BatchNorm2d(128)
         
-        self.dec_conv3 = nn.Conv2d(128, 64, 3, padding=1)
+        self.dec_conv3 = nn.Conv2d(128 + 64, 64, 3, padding=1)
         self.dec_b3 = nn.BatchNorm2d(64)
         self.dec_conv4 = nn.Conv2d(64, 64, 3, padding=1)
         self.dec_b4 = nn.BatchNorm2d(64)
         
-        self.dec_conv5 = nn.Conv2d(64, 32, 3, padding=1)
+        self.dec_conv5 = nn.Conv2d(64 + 32, 32, 3, padding=1)
         self.dec_b5 = nn.BatchNorm2d(32)
         self.dec_conv6 = nn.Conv2d(32, 32, 3, padding=1)
         self.dec_b6 = nn.BatchNorm2d(32)
@@ -64,12 +63,15 @@ class ConvNet(nn.Module):
         # Encoder layers
         x = F.relu(self.enc_b1(self.enc_conv1(x)))
         x = F.relu(self.enc_b2(self.enc_conv2(x)))
+        skip1 = x
         x = F.max_pool2d(x, 2)
         x = F.relu(self.enc_b3(self.enc_conv3(x)))
         x = F.relu(self.enc_b4(self.enc_conv4(x)))
+        skip2 = x
         x = F.max_pool2d(x, 2)
         x = F.relu(self.enc_b5(self.enc_conv5(x)))
         x = F.relu(self.enc_b6(self.enc_conv6(x)))
+        skip3 = x
         x = F.max_pool2d(x, 2)
         
         # Bottleneck
@@ -78,12 +80,15 @@ class ConvNet(nn.Module):
         
         # Decoder layers
         x = F.interpolate(x, scale_factor=2)
+        x = torch.cat([x, skip3], dim = 1)
         x = F.relu(self.dec_b1(self.dec_conv1(x)))
         x = F.relu(self.dec_b2(self.dec_conv2(x)))
         x = F.interpolate(x, scale_factor=2)
+        x = torch.cat([x, skip2], dim = 1)
         x = F.relu(self.dec_b3(self.dec_conv3(x)))
         x = F.relu(self.dec_b4(self.dec_conv4(x)))
         x = F.interpolate(x, scale_factor=2)
+        x = torch.cat([x, skip1], dim = 1)
         x = F.relu(self.dec_b5(self.dec_conv5(x)))
         x = F.relu(self.dec_b6(self.dec_conv6(x)))
         
