@@ -144,7 +144,8 @@ def main(FLAGS):
     
     # Load datasets for training and testing
     places = datasets.Places365("./data", split="train-standard", small=True, download=True)
-    train_indices, test_indices = data.select_indices(places)
+    chroma = torch.load("./data/chroma.pt")["train-standard"]
+    train_indices, test_indices = data.select_indices(places, chroma=chroma)
     
     train_set = data.PlacesDataset(places, train_indices, FLAGS.image_size, train=True)
     test_set = data.PlacesDataset(places, test_indices, FLAGS.image_size, train=False)

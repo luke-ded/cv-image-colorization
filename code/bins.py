@@ -51,7 +51,8 @@ def decode_annealed(log_probs, centers, T=0.7):
 if __name__ == "__main__":        
     # Load datasets for training and testing
     places = datasets.Places365("./data", split="train-standard", small=True, download=True)
-    train_indices, test_indices = data.select_indices(places)
+    chroma = torch.load("./data/chroma.pt")["train-standard"]
+    train_indices, test_indices = data.select_indices(places, chroma=chroma)
         
     train_set = data.PlacesDataset(places, train_indices, 64, train=False)
         

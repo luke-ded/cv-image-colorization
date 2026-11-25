@@ -35,11 +35,14 @@ CLASSES = [
     "/v/valley",
 ]
 
-def select_indices(places, test_prop=0.2, seed=1):
+def select_indices(places, test_prop=0.2, seed=1, chroma=None, min_chroma=2):
     class_ids = {places.class_to_idx[name]: [] for name in CLASSES}
     
     for index, target in enumerate(places.targets):
-        if target in class_ids.keys():
+        if target in class_ids:
+            # Filter out near grayscale images
+            if chroma is not None and chroma[index] < min_chroma:
+                continue
             class_ids[target].append(index)
             
     rng = random.Random(seed)

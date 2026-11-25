@@ -47,7 +47,8 @@ def main(FLAGS):
     model.eval()
         
     places = datasets.Places365("./data", split="val", small=True, download=True)
-    val_indices, _ = data.select_indices(places, test_prop=0)
+    chroma = torch.load("./data/chroma.pt")["val"]
+    val_indices, _ = data.select_indices(places, test_prop=0, chroma=chroma)
             
     val_set = data.PlacesDataset(places, val_indices, FLAGS.image_size, train=False)
             
