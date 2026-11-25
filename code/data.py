@@ -81,16 +81,33 @@ EXTRA_TRAIN_CLASSES = [
 # All selected classes
 ALL_CLASSES = CLASSES + EXTRA_TRAIN_CLASSES
 
-def select_indices(places, test_prop=0.2, seed=1, chroma=None, min_chroma=2, classes=CLASSES):
+
+def select_indices(places, test_prop=0.2, seed=1, chroma=None, min_chroma=2.0, classes=CLASSES):
+    """Splits the images of the given classes into train and test indices.
+
+    Args:
+        places (torchvision.datasets.Places365): Dataset to select from.
+        test_prop (float, optional): Proportion of data to use for testing. Defaults to 0.2.
+        seed (int, optional): Seed for random number generator. Defaults to 1.
+        chroma (dict[int, float], optional): Chroma values of places images. If None, no filtering. 
+            Defaults to None.
+        min_chroma (float, optional): Low chroma image removal threshold. Defaults to 2.0.
+        classes (list[str], optional): Classes to select indices from. Defaults to CLASSES.
+
+    Returns:
+        tuple[list[int], list[int]]: (train_indices, test_indices) into places.
+    """
+    
     class_ids = {places.class_to_idx[name]: [] for name in classes}
     
     for index, target in enumerate(places.targets):
         if target in class_ids:
-            # Filter out near grayscale images
+            # Filter out near grayscale images (value 2 chosen via visual inspection)
             if chroma is not None and chroma[index] < min_chroma:
                 continue
             class_ids[target].append(index)
-            
+    
+    # Seeded split per class, so every script (chroma, bins, train) gets the same split        
     rng = random.Random(seed)
     train_idx = []
     test_idx = []
@@ -104,16 +121,53 @@ def select_indices(places, test_prop=0.2, seed=1, chroma=None, min_chroma=2, cla
         test_idx.extend(class_ids[image_class][:n_test])
      
     return train_idx, test_idx
+ 
     
 def to_lab(rgb):
+    """Converts an RGB image to CIE Lab.
+
+    Args:
+        rgb (torch.Tensor): rgb image. Shape (3, H, W), values in [0, 1].
+
+    Returns:
+        torch.Tensor: CIE Lab image. Shape (3, H, W), L in [0, 100], a and b in ~[-110, 110].
+    """
+    
     return torch.from_numpy(color.rgb2lab(rgb.numpy(), channel_axis=0))
 
+
 def to_rgb(L, ab):
+    """Converts a batch of normalized L and ab channels to RGB images.
+
+    Args:
+        L (torch.Tensor): Normalized lightness. Shape (B, 1, H, W), values in [-1, 1].
+        ab (torch.Tensor): Color channels. Shape (B, 2, H, W).
+
+    Returns:
+        np.ndarray: RGB images, shape (B, H, W, 3), values in [0, 1].
+    """
+    
     lab = torch.cat([(L + 1) * 50, ab], dim=1)
     lab = lab.permute(0,2 , 3, 1).cpu().numpy()
+    
     return color.lab2rgb(lab)
 
+
 class PlacesDataset(torch.utils.data.Dataset):
+    """Places365 wrapper that returns normalized L and ab channels.
+
+    Extends torch.utils.data.Dataset.
+
+    Args:
+        places (torchvision.datasets.Places365): Underlying dataset.
+        indices (list[int]): Indices into places to use.
+        image_size (int): Height/width images are resized or cropped to.
+        train (bool): If True, applies random crop and flip augmentation.
+
+    Each item is a tuple (L, ab): L has shape (1, H, W) with values in [-1, 1],
+    and ab has shape (2, H, W).
+    """
+    
     def __init__(self, places, indices, image_size, train):
         self.places = places
         self.indices = indices
@@ -143,7 +197,7 @@ class PlacesDataset(torch.utils.data.Dataset):
         L = lab[0:1]
         ab = lab[1:3]
         
-        # Center L for better training
+        # Normalize L to [-1, 1]
         L = (L / 50) - 1
         
         return L, ab

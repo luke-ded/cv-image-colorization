@@ -30,8 +30,16 @@ import data
 import bins
 
 
-# Via hasler & susstrunk, 2003
 def colorfulness(image):
+    """Computes the colorfulness metric of Hasler & Süsstrunk (2003).
+
+    Args:
+        image (np.ndarray): RGB image, shape (H, W, 3), values in [0, 1].
+
+    Returns:
+        float: Colorfulness score (0 for grayscale; higher is more colorful).
+    """
+    
     image = image * 255 # Un normalize values
     
     r, g, b = image[..., 0], image[..., 1], image[..., 2]
@@ -45,6 +53,12 @@ def colorfulness(image):
     
 
 def main(FLAGS):
+    """Runs evaluation on the model specified by --model_path.
+
+    Args:
+        FLAGS (argparse.Namespace): Parsed argparse arguments.
+    """
+    
     # Ignore lab2rgb warnings
     warnings.filterwarnings("ignore", category=UserWarning)
     
@@ -67,7 +81,8 @@ def main(FLAGS):
     
     model.load_state_dict(torch.load(FLAGS.model_path, map_location=device))
     model.eval()
-        
+    
+    # Val set is used for test    
     places = datasets.Places365("./data", split="val", small=True, download=True)
     chroma = torch.load("./data/chroma.pt")["val"]
     val_indices, _ = data.select_indices(places, test_prop=0, chroma=chroma)
@@ -85,7 +100,7 @@ def main(FLAGS):
             predicted_ab = bins.decode_annealed(model(L), centers)
             
             images = {
-                "gray": data.to_rgb(L, torch.zeros_like(ab)),
+                "gray": data.to_rgb(L, torch.zeros_like(ab)), # Grayscale baseline
                 "predicted": data.to_rgb(L, predicted_ab),
                 "truth": data.to_rgb(L, ab)
             }
@@ -98,32 +113,29 @@ def main(FLAGS):
                     if name != "truth":
                         # We cant calculate these metrics for truth
                         results[name]["psnr"].append(peak_signal_noise_ratio(truth, image, data_range=1.0))
-                        results[name]["ssim"].append(structural_similarity(truth, image, channel_axis=-1, data_range=1.0))
+                        results[name]["ssim"].append(structural_similarity(truth, image, channel_axis=-1, data_range=1.0)) # SSIM: Wang et al. (2004)
                     results[name]["color"].append(colorfulness(image))
 
+    # Display output table
     print("Output\t\tPSNR\tSSIM\tColorfulness")
     for name, r in results.items():
         psnr = np.mean(r["psnr"]) if r["psnr"] else float("nan")
         ssim = np.mean(r["ssim"]) if r["ssim"] else float("nan")
         print(f"{name:10s}\t{psnr:.2f}\t{ssim:.4f}\t{np.mean(r['color']):.2f}")
-
-        
     print()
             
        
 if __name__ == "__main__":
-    
-    # Set parameters for CNN Exercise
-    parser = argparse.ArgumentParser('CNN Exercise.')
+    # Set parameters for evaluation
+    parser = argparse.ArgumentParser('Evaluates Colorization Performance of a Model.')
     parser.add_argument('--batch_size',
                         type=int, default=50,
                         help='Batch size. Must divide evenly into the dataset sizes.')
     parser.add_argument('--image_size', type=int, default=64,
                         help='Height/width images are resized to.')
-    parser.add_argument('--model_path', type=str, default='data/output/best_model-0.01-40-50.pt',
+    parser.add_argument('--model_path', type=str, required=True,
                         help='Path to the model weights for evaluation.')
-
-            
+      
     FLAGS = None
     FLAGS, unparsed = parser.parse_known_args()
     

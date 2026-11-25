@@ -10,8 +10,11 @@
 #
 # Filename: ConvNet.py
 #
-## Description: class definition of a U-net-style encoder-decoder structure
-## for use as a model for image colorization
+# Description: class definition of a U-net-style encoder-decoder structure
+# for use as a model for image colorization
+
+# Skip connections via U-Net (Ronneberger et al., 2015), batch normalization 
+# from Ioffe & Szegedy (2015).
 #
 ###############################################################################
 
@@ -21,10 +24,14 @@ import torch.nn.functional as F
 
 
 class ConvNet(nn.Module):
+    """U-Net-style encoder-decoder for image colorization.
+
+    Extends torch.nn.Module.
+
+    Args:
+        num_bins (int): Number of ab color bins (Q) to predict for each pixel.
     """
-        Defines a U-net-style encoder-decoder Structure
-        Extends torch.nn.Module class
-    """    
+    
     def __init__(self, num_bins):
         super(ConvNet, self).__init__()
         
@@ -67,10 +74,20 @@ class ConvNet(nn.Module):
         self.dec_conv6 = nn.Conv2d(32, 32, 3, padding=1)
         self.dec_b6 = nn.BatchNorm2d(32)
         
-        # Output layer to convert into bin number
+        # Output layer to convert into bin score
         self.out = nn.Conv2d(32, num_bins, 1)
 
+
     def forward(self, x):
+        """Predicts a color bin distribution for every pixel.
+
+        Args:
+            x (torch.Tensor): Normalized L channel, shape (B, 1, H, W). H and W must be divisible by 8.
+
+        Returns:
+            torch.Tensor: Log-probabilities over the color bins, shape (B, Q, H, W).
+        """
+        
         # Encoder layers
         x = F.relu(self.enc_b1(self.enc_conv1(x)))
         x = F.relu(self.enc_b2(self.enc_conv2(x)))
@@ -90,8 +107,9 @@ class ConvNet(nn.Module):
         x = F.relu(self.enc_b8(self.enc_conv8(x)))
         
         # Decoder layers
-        x = F.interpolate(x, scale_factor=2)
-        x = torch.cat([x, skip3], dim = 1)
+        
+        x = F.interpolate(x, scale_factor=2) # 2x upscale
+        x = torch.cat([x, skip3], dim = 1) # Concatenate encoder features (skip connection)
         x = F.relu(self.dec_b1(self.dec_conv1(x)))
         x = F.relu(self.dec_b2(self.dec_conv2(x)))
         x = F.interpolate(x, scale_factor=2)
@@ -104,6 +122,6 @@ class ConvNet(nn.Module):
         x = F.relu(self.dec_b6(self.dec_conv6(x)))
         
         
-        probs = F.log_softmax(self.out(x), dim=1)
+        log_probs = F.log_softmax(self.out(x), dim=1)
         
-        return probs
+        return log_probs

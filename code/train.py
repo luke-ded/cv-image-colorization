@@ -38,16 +38,21 @@ import visualize
 
 
 def train(model, device, train_loader, optimizer, criterion, epoch, batch_size, cell_to_bin):
-    '''
-    Trains the model for an epoch and optimizes it.
-    model: The model to train. Should already be in correct device.
-    device: 'cuda' or 'mps' or 'cpu'.
-    train_loader: dataloader for training samples.
-    optimizer: optimizer to use for model parameter updates.
-    criterion: used to compute loss for prediction and target 
-    epoch: Current epoch to train for.
-    batch_size: Batch size to be used.
-    '''
+    """Trains the model for an epoch and optimizes it.
+
+    Args:
+        model (ConvNet): The model to train. Should already be in correct device.
+        device (torch.device): Device the model is on, values 'cuda' or 'mps' or 'cpu'.
+        train_loader (torch.utils.data.DataLoader): dataloader for training samples.
+        optimizer (optim.SGD): optimizer to use for model parameter updates.
+        criterion (nn.NLLLoss): used to compute loss for prediction and target.
+        epoch (int): Current epoch being trained.
+        batch_size (int): Batch size to be used.
+        cell_to_bin (torch.Tensor): Lookup table from grid cell to bin index.
+
+    Returns:
+        tuple[float, float]: (train_loss, train_acc)
+    """
     
     # Set model to train mode before each epoch
     model.train()
@@ -64,13 +69,12 @@ def train(model, device, train_loader, optimizer, criterion, epoch, batch_size, 
         # Push data/label to correct device
         L, ab = L.to(device), ab.to(device)
         
-        # Reset optimizer gradients. Avoids grad accumulation (accumulation used in RNN).
+        # Reset optimizer gradients. Avoids grad accumulation.
         optimizer.zero_grad()
         
         # Do forward pass for current set of data
         output = model(L)
         
-        # ======================================================================
         # Compute loss based on criterion
         target = bins.encode(ab, cell_to_bin)
         loss = criterion(output, target)
@@ -88,6 +92,7 @@ def train(model, device, train_loader, optimizer, criterion, epoch, batch_size, 
         pred = output.argmax(dim=1, keepdim=True)
             
         # Count correct predictions overall 
+        # Stays low by design. Rebalancing trades argmax accuracy for rare colors.
         correct += torch.count_nonzero(pred == target.view_as(pred))
         total += (target != -1).sum().item()
 
@@ -97,17 +102,23 @@ def train(model, device, train_loader, optimizer, criterion, epoch, batch_size, 
     print('Train set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)'.format(
         float(np.mean(losses)), correct, total,
         100. * train_acc))
+    
     return train_loss, train_acc
     
 
 def test(model, device, test_loader, criterion, cell_to_bin):
-    '''
-    Tests the model.
-    model: The model to evaluate. Should already be in correct device.
-    device: 'cuda' or 'mps' or 'cpu'.
-    test_loader: dataloader for test samples.
-    criterion: used to compute loss for prediction and target 
-    '''
+    """Tests the model.
+
+    Args:
+        model (ConvNet): The model to evaluate. Should already be in correct device.
+        device (torch.device): Device the model is on, values 'cuda' or 'mps' or 'cpu'.
+        test_loader (torch.utils.data.DataLoader): dataloader for test samples.
+        criterion (nn.NLLLoss): used to compute loss for prediction and target.
+        cell_to_bin (torch.Tensor): Lookup table from grid cell to bin index.
+
+    Returns:
+        tuple[float, float]: (test_loss, test_acc)
+    """
     
     # Set model to eval mode to notify all layers.
     model.eval()
@@ -125,7 +136,6 @@ def test(model, device, test_loader, criterion, cell_to_bin):
             # Predict for data by doing forward pass
             output = model(L)
             
-            # ======================================================================
             # Compute loss based on same criterion as training
             target = bins.encode(ab, cell_to_bin)
             loss = criterion(output, target)
@@ -149,7 +159,14 @@ def test(model, device, test_loader, criterion, cell_to_bin):
         
     return test_loss, test_acc
 
+
 def main(FLAGS):
+    """Trains an image colorization model and outputs results.
+
+    Args:
+        FLAGS (argparse.Namespace): Parsed argparse arguments.
+    """
+    
     # Check if cuda is available
     use_cuda = torch.cuda.is_available()
     use_mps = torch.backends.mps.is_available() # Add MPS for macos gpu
@@ -181,7 +198,7 @@ def main(FLAGS):
     # Initialize the model and send to device 
     model = ConvNet(Q).to(device)
 
-    # Define loss function
+    # Define loss function. NLL on softmax output yields cross-entropy. Weights apply class rebalancing.
     criterion = nn.NLLLoss(weight=weights, ignore_index=-1)
         
     # Define optimizer function.
@@ -224,7 +241,7 @@ def main(FLAGS):
             loss_not_inc = 0
         else:
             loss_not_inc += 1
-            if loss_not_inc >= 8: # Quit if loss not increasing after this many
+            if loss_not_inc >= 8: # Quit if loss not improving after this many
                 break
             
     # Record end and total time
@@ -246,8 +263,8 @@ def main(FLAGS):
 
 
 if __name__ == "__main__":
-    # Set parameters for CNN Exercise
-    parser = argparse.ArgumentParser('CNN Exercise.')
+    # Set parameters for model training
+    parser = argparse.ArgumentParser('Encoder-decoder Image Colorization Training.')
     parser.add_argument('--learning_rate',
                         type=float, default=0.01,
                         help='Initial learning rate.')
@@ -257,7 +274,7 @@ if __name__ == "__main__":
                         help='Number of epochs to run trainer.')
     parser.add_argument('--batch_size',
                         type=int, default=50,
-                        help='Batch size. Must divide evenly into the dataset sizes.')
+                        help='Batch size.')
     parser.add_argument('--image_size', type=int, default=64,
                         help='Height/width images are resized to.')
 

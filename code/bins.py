@@ -10,21 +10,23 @@
 #
 # Filename: bins.py
 #
-## Description: run individually to set up bins by finding which bins to use, 
+# Description: run individually to set up bins by finding which bins to use, 
 # the center of each bin, and which colors are common/rare. Also contains bin 
 # related helper functions.
+#
+# Method via Zhang, Isola & Efros, "Colorful Image Colorization" (ECCV 2016)
 #
 ###############################################################################
 
 import torch
 
 from torch.utils.data import DataLoader
-from torchvision import datasets, transforms
+from torchvision import datasets
 
 # Custom file
 import data
 
-
+# Quantize ab space into a 22x22 grid of 10x10 cells covering [-110, 110]
 AB_MIN = -110
 GRID = 10
 N_CELLS = 22
@@ -32,6 +34,16 @@ N_CELLS_SQ = N_CELLS * N_CELLS
 
 
 def ab_to_cell(ab):
+    """Maps ab values to their grid cell index.
+
+    Args:
+        ab (torch.Tensor): Color channels, shape (B, 2, H, W).
+
+    Returns:
+        torch.Tensor: Grid cell index per pixel, shape (B, H, W), dtype long, 
+            values in [0, N_CELLS_SQ - 1].
+    """
+    
     index = torch.floor((ab - AB_MIN) / GRID).long().clamp(0, N_CELLS - 1)
     a_index = index[:, 0]
     b_index = index[:, 1]
@@ -40,15 +52,36 @@ def ab_to_cell(ab):
     return cell
 
 
-# Returns ground truth bin number for pixel
 def encode(ab, cell_to_bin):
-    cell = ab_to_cell(ab)  # (B, H, W), values 0–483
-    return cell_to_bin[cell] # (B, H, W), values 0–205 or -1
+    """Returns ground truth bin number for pixel
+
+    Args:
+        ab (torch.Tensor): Color channels, shape (B, 2, H, W).
+        cell_to_bin (torch.Tensor): Lookup table from grid cell to bin index,
+            shape (N_CELLS_SQ,), dtype long, -1 for unused cells.
+
+    Returns:
+        torch.Tensor: Bin index per pixel, shape (B, H, W), values in [0, Q - 1], 
+            or -1 if the cell is unused.
+    """
+    
+    cell = ab_to_cell(ab)
+    
+    return cell_to_bin[cell]
 
 
-# Returns model prediction from bin to color
 def decode(log_probs, centers):
-    index = log_probs.argmax(dim=1) # (B, H, W), values 0–205
+    """Converts model output to ab colors by taking each pixel's most likely bin.
+
+    Args:
+        log_probs (torch.Tensor): Log-probabilities from the model, shape (B, Q, H, W).
+        centers (torch.Tensor): ab value at the center of each bin, shape (Q, 2).
+
+    Returns:
+        torch.Tensor: Predicted ab channels, shape (B, 2, H, W).
+    """
+    
+    index = log_probs.argmax(dim=1)
     
     ab = centers[index]
     ab = ab.permute(0, 3, 1 ,2) # Re order channels
@@ -56,9 +89,24 @@ def decode(log_probs, centers):
     return ab
 
 
-# Returns model prediction from bin to color
 def decode_annealed(log_probs, centers, T=0.7):
+    """Converts model output to ab colors using the annealed mean.
+
+    Sharpens each pixel's bin distribution with temperature T, then takes the
+    probability-weighted average of the bin centers.
+
+    Args:
+        log_probs (torch.Tensor): Log-probabilities from the model, shape (B, Q, H, W).
+        centers (torch.Tensor): ab value at the center of each bin, shape (Q, 2).
+        T (float, optional): Softmax temperature. Lower values are more vivid,
+            higher are more dull. Defaults to 0.7.
+
+    Returns:
+        torch.Tensor: Predicted ab channels, shape (B, 2, H, W).
+    """
+    
     probs = torch.nn.functional.softmax(log_probs / T, dim=1)
+    
     return torch.einsum("bqhw,qc->bchw", probs, centers)
     
         
@@ -79,7 +127,8 @@ if __name__ == "__main__":
     for L, ab in train_loader:
         cell = ab_to_cell(ab)
         counts += torch.bincount(cell.flatten(), minlength=N_CELLS_SQ)
-        
+    
+    # Keep only cells that occur in training data 
     kept = counts > 0
     Q = int(kept.sum())
     
@@ -100,9 +149,10 @@ if __name__ == "__main__":
     all_centers = torch.stack([center_a, center_b], dim=1) # (N_CELLS_SQ, 2)
     centers = all_centers[kept]
     
-    # Rebalance weights
+    # Rebalance weights. Rare, vivid colors get higher weights to prevent dullness.
+    lambda_value = 0.5
     p = counts[kept] / counts.sum()
-    w = 1 / ((1 - 0.5) * p + (0.5 / Q))
+    w = 1 / ((1 - lambda_value) * p + (lambda_value / Q))
     w = w / (p * w).sum()
     
     torch.save({
