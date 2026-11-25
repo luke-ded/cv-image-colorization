@@ -78,7 +78,7 @@ class PlacesDataset(torch.utils.data.Dataset):
         if train:
             # Transform with flips to help avoid overfitting
             self.transform=transforms.Compose([
-                transforms.Resize(image_size),
+                transforms.RandomResizedCrop(image_size, scale=(0.4, 1.0)),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor()
             ])
