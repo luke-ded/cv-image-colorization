@@ -1,7 +1,27 @@
+#!/usr/bin/env python3
+###############################################################################
+
+# Luke Dederich
+# Final Project
+# CAP 5415 Computer Vision
+# Dr. Rawat
+
+###############################################################################
+#
+# Filename: visualize.py
+#
+## Description: helper functions for data visualization
+#
+###############################################################################
+
+import torch
 import matplotlib
 import matplotlib.pyplot as plt
-import torch
-import bins, data
+
+# Custom files
+import bins
+import data
+
 
 matplotlib.use("Agg") 
 

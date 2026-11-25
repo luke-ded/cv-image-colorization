@@ -1,25 +1,41 @@
 #!/usr/bin/env python3
+###############################################################################
 
 # Luke Dederich
 # Final Project
 # CAP 5415 Computer Vision
 # Dr. Rawat
 
+###############################################################################
+#
+# Filename: train.py
+#
+# Description: trains a encoder-decoder model for image colorization on the
+# torch Places365 dataset. It saves the model, creates a sample image grid,
+# and outputs the training epochs to a csv file.
+#
+###############################################################################
+
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.data import DataLoader
-from torchvision import datasets, transforms
-from ConvNet import ConvNet 
-import argparse
 import numpy as np 
+import argparse
 import csv
 import time
 import os
 import math
 from datetime import timedelta
-import data, bins, visualize
+
+from torch.utils.data import DataLoader
+from torchvision import datasets
+from ConvNet import ConvNet 
+
+# Custom files
+import data
+import bins
+import visualize
+
 
 def train(model, device, train_loader, optimizer, criterion, epoch, batch_size, cell_to_bin):
     '''

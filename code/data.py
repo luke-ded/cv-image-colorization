@@ -1,8 +1,27 @@
-from torchvision import datasets, transforms
+#!/usr/bin/env python3
+###############################################################################
+#
+# Luke Dederich
+# Final Project
+# CAP 5415 Computer Vision
+# Dr. Rawat
+#
+###############################################################################
+#
+# Filename: data.py
+#
+# Description: contains the class definition wrapper for the torch Places365
+# dataset with transforms and Lab handling. Also contains data helper functions
+# and lists of hand-selected outdoor classes.
+#
+###############################################################################
+
 import torch
 import random
 
+from torchvision import transforms
 from skimage import color
+
 
 # Selected classes of outdoor scenes with varying colors
 CLASSES = [
@@ -35,14 +54,31 @@ CLASSES = [
     "/v/valley",
 ]
 
+# Extra classes for extended training
 EXTRA_TRAIN_CLASSES = [
-    "/m/mountain", "/m/mountain_snowy", "/c/cliff", "/c/creek", "/r/river",
-    "/i/islet", "/s/swamp", "/m/marsh", "/p/pond", "/o/orchard",
-    "/v/vineyard", "/c/corn_field", "/f/field/cultivated", "/f/forest_path",
-    "/f/forest_road", "/t/tree_farm", "/d/desert/vegetation", "/r/rock_arch",
-    "/l/lawn", "/f/field_road",
+    "/m/mountain", 
+    "/m/mountain_snowy", 
+    "/c/cliff", 
+    "/c/creek", 
+    "/r/river",
+    "/i/islet", 
+    "/s/swamp", 
+    "/m/marsh", 
+    "/p/pond", 
+    "/o/orchard",
+    "/v/vineyard", 
+    "/c/corn_field", 
+    "/f/field/cultivated", 
+    "/f/forest_path",
+    "/f/forest_road", 
+    "/t/tree_farm", 
+    "/d/desert/vegetation", 
+    "/r/rock_arch",
+    "/l/lawn", 
+    "/f/field_road",
 ]
 
+# All selected classes
 ALL_CLASSES = CLASSES + EXTRA_TRAIN_CLASSES
 
 def select_indices(places, test_prop=0.2, seed=1, chroma=None, min_chroma=2, classes=CLASSES):
@@ -83,7 +119,7 @@ class PlacesDataset(torch.utils.data.Dataset):
         self.indices = indices
         
         if train:
-            # Transform with flips to help avoid overfitting
+            # Transform with flips and crops to help avoid overfitting
             self.transform=transforms.Compose([
                 transforms.RandomResizedCrop(image_size, scale=(0.4, 1.0)),
                 transforms.RandomHorizontalFlip(),

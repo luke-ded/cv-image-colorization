@@ -1,13 +1,24 @@
 #!/usr/bin/env python3
-
+###############################################################################
+#
 # Luke Dederich
 # Final Project
 # CAP 5415 Computer Vision
 # Dr. Rawat
+#
+###############################################################################
+#
+# Filename: ConvNet.py
+#
+## Description: class definition of a U-net-style encoder-decoder structure
+## for use as a model for image colorization
+#
+###############################################################################
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 
 class ConvNet(nn.Module):
     """

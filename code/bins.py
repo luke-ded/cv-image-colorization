@@ -7,19 +7,29 @@
 # Dr. Rawat
 
 ###############################################################################
-## The goal: set up bins by finding which bins to use, the center of each bin, 
-## and which colors are common/rare
+#
+# Filename: bins.py
+#
+## Description: run individually to set up bins by finding which bins to use, 
+# the center of each bin, and which colors are common/rare. Also contains bin 
+# related helper functions.
+#
 ###############################################################################
 
-import data
 import torch
+
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
+
+# Custom file
+import data
+
 
 AB_MIN = -110
 GRID = 10
 N_CELLS = 22
 N_CELLS_SQ = N_CELLS * N_CELLS
+
 
 def ab_to_cell(ab):
     index = torch.floor((ab - AB_MIN) / GRID).long().clamp(0, N_CELLS - 1)
@@ -29,10 +39,12 @@ def ab_to_cell(ab):
     
     return cell
 
+
 # Returns ground truth bin number for pixel
 def encode(ab, cell_to_bin):
     cell = ab_to_cell(ab)  # (B, H, W), values 0–483
     return cell_to_bin[cell] # (B, H, W), values 0–205 or -1
+
 
 # Returns model prediction from bin to color
 def decode(log_probs, centers):
@@ -43,10 +55,12 @@ def decode(log_probs, centers):
     
     return ab
 
+
 # Returns model prediction from bin to color
 def decode_annealed(log_probs, centers, T=0.7):
     probs = torch.nn.functional.softmax(log_probs / T, dim=1)
     return torch.einsum("bqhw,qc->bchw", probs, centers)
+    
         
 if __name__ == "__main__":        
     # Load datasets for training and testing

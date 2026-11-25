@@ -1,12 +1,34 @@
+#!/usr/bin/env python3
+###############################################################################
+
+# Luke Dederich
+# Final Project
+# CAP 5415 Computer Vision
+# Dr. Rawat
+
+###############################################################################
+#
+# Filename: evaluate.py
+#
+# Description: evaluates a model outputting PSNR, SSIM, and Colorfulness 
+# metrics
+#
+###############################################################################
+
 import argparse
 import warnings
 import numpy as np
 import torch
+
 from torch.utils.data import DataLoader
 from torchvision import datasets
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
-import data, bins, visualize
 from ConvNet import ConvNet
+
+# Custom files
+import data
+import bins
+
 
 # Via hasler & susstrunk, 2003
 def colorfulness(image):
