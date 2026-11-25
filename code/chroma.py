@@ -8,7 +8,7 @@ if __name__ == "__main__":
     
     for split in ["train-standard", "val"]:
         places = datasets.Places365("./data", split=split, small=True)
-        indices, _ = data.select_indices(places, test_prop=0)
+        indices, _ = data.select_indices(places, test_prop=0, classes=data.ALL_CLASSES)
         dataset = data.PlacesDataset(places, indices, 64, train=False)
         loader = DataLoader(dataset, batch_size=200, shuffle=False, num_workers=4)
         

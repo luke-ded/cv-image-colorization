@@ -52,7 +52,7 @@ if __name__ == "__main__":
     # Load datasets for training and testing
     places = datasets.Places365("./data", split="train-standard", small=True, download=True)
     chroma = torch.load("./data/chroma.pt")["train-standard"]
-    train_indices, test_indices = data.select_indices(places, chroma=chroma)
+    train_indices, test_indices = data.select_indices(places, chroma=chroma, classes=data.ALL_CLASSES)
         
     train_set = data.PlacesDataset(places, train_indices, 64, train=False)
         

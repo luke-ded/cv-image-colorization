@@ -35,8 +35,18 @@ CLASSES = [
     "/v/valley",
 ]
 
-def select_indices(places, test_prop=0.2, seed=1, chroma=None, min_chroma=2):
-    class_ids = {places.class_to_idx[name]: [] for name in CLASSES}
+EXTRA_TRAIN_CLASSES = [
+    "/m/mountain", "/m/mountain_snowy", "/c/cliff", "/c/creek", "/r/river",
+    "/i/islet", "/s/swamp", "/m/marsh", "/p/pond", "/o/orchard",
+    "/v/vineyard", "/c/corn_field", "/f/field/cultivated", "/f/forest_path",
+    "/f/forest_road", "/t/tree_farm", "/d/desert/vegetation", "/r/rock_arch",
+    "/l/lawn", "/f/field_road",
+]
+
+ALL_CLASSES = CLASSES + EXTRA_TRAIN_CLASSES
+
+def select_indices(places, test_prop=0.2, seed=1, chroma=None, min_chroma=2, classes=CLASSES):
+    class_ids = {places.class_to_idx[name]: [] for name in classes}
     
     for index, target in enumerate(places.targets):
         if target in class_ids:
@@ -61,9 +71,6 @@ def select_indices(places, test_prop=0.2, seed=1, chroma=None, min_chroma=2):
     
 def to_lab(rgb):
     return torch.from_numpy(color.rgb2lab(rgb.numpy(), channel_axis=0))
-
-def to_rgb(lab):
-    return torch.from_numpy(color.lab2rgb(lab.numpy(), channel_axis=0))
 
 def to_rgb(L, ab):
     lab = torch.cat([(L + 1) * 50, ab], dim=1)
