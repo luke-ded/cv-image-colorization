@@ -7,7 +7,7 @@ project. The model created in this project produces colorized results that typic
 
 ### Requirements
 
-- Python 3 (tested with 3.14) and bash
+- Python 3 (3.10-3.14) and bash
 - Packages in `scripts/requirements.txt`: torch, torchvision, numpy, scikit-image, matplotlib
 - About 55 GB of free disk space for the Places365 download
 
