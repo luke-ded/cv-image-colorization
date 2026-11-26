@@ -186,9 +186,24 @@ class PlacesDataset(torch.utils.data.Dataset):
             )
 
     def __len__(self):
+        """Returns the number of images.
+
+        Returns:
+            int: number of images.
+        """
+
         return len(self.indices)
 
     def __getitem__(self, index):
+        """Returns (L, ab) for the image at index.
+
+        Args:
+            index (int): Position in this dataset's indices list.
+
+        Returns:
+            tuple[torch.Tensor, torch.Tensor]: (L, ab).
+        """
+
         image = self.places[self.indices[index]][0]
         normalized_rgb = self.transform(image)
         lab = to_lab(normalized_rgb)

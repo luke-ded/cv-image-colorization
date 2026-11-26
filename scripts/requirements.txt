@@ -1,0 +1,6 @@
+# Python dependencies for the project
+torch==2.15.0
+torchvision==0.29.2
+numpy==2.5.4
+scikit-image==0.26.0
+matplotlib==3.11.2

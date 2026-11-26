@@ -10,7 +10,7 @@
 #
 # Filename: train.py
 #
-# Description: trains a encoder-decoder model for image colorization on the
+# Description: trains an encoder-decoder model for image colorization on the
 # torch Places365 dataset. It saves the model, creates a sample image grid,
 # and outputs the training epochs to a csv file.
 #
@@ -314,7 +314,7 @@ if __name__ == "__main__":
         "--learning_rate", type=float, default=0.01, help="Initial learning rate."
     )
     parser.add_argument(
-        "--num_epochs", type=int, default=40, help="Number of epochs to run trainer."
+        "--num_epochs", type=int, default=60, help="Number of epochs to run trainer."
     )
     parser.add_argument("--batch_size", type=int, default=50, help="Batch size.")
     parser.add_argument(

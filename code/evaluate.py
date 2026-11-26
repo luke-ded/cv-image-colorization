@@ -146,7 +146,7 @@ if __name__ == "__main__":
         "--batch_size",
         type=int,
         default=50,
-        help="Batch size. Must divide evenly into the dataset sizes.",
+        help="Batch size.",
     )
     parser.add_argument(
         "--image_size", type=int, default=64, help="Height/width images are resized to."
