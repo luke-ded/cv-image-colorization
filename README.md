@@ -44,3 +44,36 @@ python3 code/evaluate.py --model_path data/output/best_model-0.01-60-50.pt
 ```
 
 `data/chroma.pt` and `data/bins.pt` must already be created to run the evaluation script.
+
+## Report
+
+![Report page 1](report/page_images/page-01.png)
+
+![Report page 2](report/page_images/page-02.png)
+
+![Report page 3](report/page_images/page-03.png)
+
+![Report page 4](report/page_images/page-04.png)
+
+![Report page 5](report/page_images/page-05.png)
+
+![Report page 6](report/page_images/page-06.png)
+
+![Report page 7](report/page_images/page-07.png)
+
+![Report page 8](report/page_images/page-08.png)
+
+![Report page 9](report/page_images/page-09.png)
+
+![Report page 10](report/page_images/page-10.png)
+
+![Report page 11](report/page_images/page-11.png)
+
+![Report page 12](report/page_images/page-12.png)
+
+![Report page 13](report/page_images/page-13.png)
+
+![Report page 14](report/page_images/page-14.png)
+
+![Report page 15](report/page_images/page-15.png)
+
